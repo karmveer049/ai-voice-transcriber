@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device_width, initial-scale=1.0">
+    <title>Multilingual AI Transcriber (MCA Project)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Glass transparency level */
+            --glass-bg: rgba(13, 17, 23, 0.5); 
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --accent-cyan: #00f2ff;
+            --accent-purple: #bc13fe;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            overflow-x: hidden;
+            
+            /* --- UPDATED: Points to the static folder now --- */
+            background: url('/static/image_1.png') no-repeat center center fixed;
+            background-size: cover;
+            background-color: #000;
+        }
+
+        /* Dark Overlay */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: -1;
+            backdrop-filter: blur(3px);
+            -webkit-backdrop-filter: blur(3px);
+        }
+
+        /* Glass Container */
+        .container {
+            position: relative;
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 3rem;
+            width: 90%;
+            max-width: 950px;
+            box-shadow: 0 0 40px rgba(0, 242, 255, 0.15);
+            animation: float 8s ease-in-out infinite;
+        }
+
+        /* --- UPDATED TITLE STYLING FOR MOVING GRADIENT --- */
+        h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 0.5rem;
+            letter-spacing: -1px;
+            
+            /* 1. Define a gradient with multiple colors */
+            background: linear-gradient(
+                90deg, 
+                #ffffff 0%, 
+                #00f2ff 25%, 
+                #bc13fe 50%, 
+                #00f2ff 75%, 
+                #ffffff 100%
+            );
+            
+            /* 2. Make the background larger than the text so it can move */
+            background-size: 200% auto;
+            
+            /* 3. Clip the background to the text */
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent;
+            
+            /* 4. Animate the background position */
+            animation: shineText 5s linear infinite;
+            
+            /* Optional glow */
+            text-shadow: 0 0 30px rgba(0, 242, 255, 0.2);
+        }
+
+        p.subtitle {
+            text-align: center;
+            margin-bottom: 3rem;
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 300;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        /* Controls */
+        .controls-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            align-items: center;
+            margin-bottom: 40px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button {
+            padding: 15px 35px;
+            border-radius: 8px;
+            border: none;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button::after {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: 0.5s;
+        }
+        button:hover::after { left: 100%; }
+        button:hover { transform: translateY(-2px); }
+
+        #recordBtn {
+            background: linear-gradient(135deg, #ff0055, #ff0000);
+            color: white;
+            box-shadow: 0 0 15px rgba(255, 0, 85, 0.4);
+        }
+        
+        #recordBtn.recording {
+            background: #ff0000;
+            animation: pulse-recording 1.5s infinite;
+        }
+
+        #stopBtn {
+            background: transparent;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        #stopBtn:not(:disabled):hover {
+             border-color: white;
+             box-shadow: 0 0 10px rgba(255,255,255,0.2);
+        }
+
+        #submitBtn {
+            background: linear-gradient(135deg, #00f2ff, #0066ff);
+            color: #000;
+            font-weight: 800;
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.4);
+        }
+
+        button:disabled {
+            opacity: 0.3;
+            pointer-events: none;
+            filter: grayscale(1);
+        }
+
+        /* File Upload */
+        .upload-section {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(0, 242, 255, 0.2);
+            padding: 15px 25px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            transition: 0.3s;
+        }
+        .upload-section:hover {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.1);
+        }
+
+        input[type="file"]::file-selector-button {
+            margin-right: 15px;
+            border: none;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px 16px;
+            border-radius: 4px;
+            color: var(--accent-cyan);
+            cursor: pointer;
+            transition: 0.3s;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        input[type="file"]::file-selector-button:hover { background: rgba(0, 242, 255, 0.1); }
+
+        .status {
+            text-align: center;
+            font-size: 1rem;
+            color: var(--accent-cyan);
+            margin: 20px 0;
+            font-family: monospace;
+            letter-spacing: 1px;
+            min-height: 24px;
+        }
+
+        #results { animation: slideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+        }
+        
+        @media(min-width: 768px) {
+            .results-grid { grid-template-columns: 1fr 1fr; }
+        }
+
+        .result-box {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 25px;
+            position: relative;
+        }
+        
+        .result-box h3 {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            color: #fff;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 10px;
+        }
+
+        .transcript-box { border-top: 2px solid #ff0055; }
+        .summary-box { border-top: 2px solid #00f2ff; }
+
+        #transcriptText, #summaryText {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: #e5e7eb;
+            max-height: 350px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        /* --- ANIMATIONS --- */
+        
+        /* Animation for the Title Gradient */
+        @keyframes shineText {
+            0% { background-position: 0% center; }
+            100% { background-position: 200% center; }
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+            100% { transform: translateY(0px); }
+        }
+
+        @keyframes pulse-recording {
+            0% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 0, 0, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0); }
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>🎙️ Multilingual AI Transcriber</h1>
+        <p class="subtitle">Processing // Hindi • English • Hinglish</p>
+
+        <div class="controls-wrapper">
+            <div class="button-group">
+                <button id="recordBtn">Start Recording</button>
+                <button id="stopBtn" disabled>Stop</button>
+            </div>
+
+            <div class="upload-section">
+                <span>📂 Upload Audio: </span>
+                <input type="file" id="audioFile" accept="audio/*">
+                <button id="submitBtn">Analyze</button>
+            </div>
+        </div>
+
+        <div id="status" class="status">System Standby...</div>
+
+        <div id="results" style="display:none;">
+            <div class="results-grid">
+                <div class="result-box transcript-box">
+                    <h3>📜 Text Transcript</h3>
+                    <p id="transcriptText"></p>
+                </div>
+                
+                <div class="result-box summary-box">
+                    <h3>🧠 AI Summary</h3>
+                    <div id="summaryText"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+        const recordBtn = document.getElementById('recordBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const submitBtn = document.getElementById('submitBtn');
+        const status = document.getElementById('status');
+
+        // --- Recording Logic ---
+        recordBtn.addEventListener('click', async () => {
+            recordBtn.classList.add('recording');
+            recordBtn.textContent = "Listening...";
+            
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+
+            mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
+            
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                handleUpload(audioBlob, "recording.wav");
+            };
+
+            mediaRecorder.start();
+            recordBtn.disabled = true;
+            stopBtn.disabled = false;
+            status.textContent = "Recording... Speak in Hindi, English or Hinglish";
+        });
+
+        stopBtn.addEventListener('click', () => {
+            recordBtn.classList.remove('recording');
+            recordBtn.textContent = "Start Recording";
+
+            mediaRecorder.stop();
+            recordBtn.disabled = false;
+            stopBtn.disabled = true;
+            status.textContent = "Processing recording...";
+        });
+
+        // --- File Upload Logic ---
+        submitBtn.addEventListener('click', () => {
+            const fileInput = document.getElementById('audioFile');
+            if (fileInput.files.length === 0) {
+                alert("Please select a file first");
+                return;
+            }
+            handleUpload(fileInput.files[0], fileInput.files[0].name);
+        });
+
+        // --- Core Upload Function ---
+        async function handleUpload(audioData, filename) {
+            status.textContent = "Sending to AI Engine (Whisper + Gemini)...";
+            document.getElementById('results').style.display = 'none';
+            
+            const formData = new FormData();
+            formData.append("file", audioData, filename);
+
+            try {
+                const response = await fetch('/process-audio/', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                
+                if (data.error) {
+                    status.textContent = "Error: " + data.error;
+                } else {
+                    status.textContent = "Done!";
+                    document.getElementById('results').style.display = 'block';
+                    document.getElementById('transcriptText').textContent = data.original_text;
+                    
+                    let formattedSummary = data.summary.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+                    document.getElementById('summaryText').innerHTML = formattedSummary;
+                }
+            } catch (error) {
+                console.error(error);
+                status.textContent = "An error occurred during upload.";
+            }
+        }
+    </script>
+</body>
+</html>
